@@ -266,7 +266,7 @@ function App() {
 
           <footer className="pt-3 mt-4 text-muted border-top text-center" >
             <img alt='Welcome' style={{ marginTop: -10 }} width="30" height="24"
-              src={process.env.PUBLIC_URL + '/mount-fuji.svg'} ></img> 峰 &copy; 2021
+              src={process.env.PUBLIC_URL + '/mount-fuji.svg'} ></img> 物流 &copy; 2021
           </footer>
 
 
