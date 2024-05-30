@@ -9,5 +9,5 @@ y相反（前后）需调整为-y方向看
 x相同（左右）
 z相同（上下）
 ```
-test
-123
+
+set NODE_OPTIONS=--openssl-legacy-provider

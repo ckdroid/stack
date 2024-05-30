@@ -2,7 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
+
+
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 
 import 'bootstrap/dist/css/bootstrap.css';
 
@@ -16,24 +23,66 @@ function App() {
   const [controls, setControls] = useState();
   const [count, setCount] = useState(28);
 
-  const [model, setModel] = useState();
+  const [composer, setComposer] = useState();
+  const [outlinePass, setOutlinePass] = useState();
+
+  const [angle, setAngle] = useState();
+
+  const toDegrees = (radians) => radians * (180 / Math.PI);
 
 
   useEffect(() => {
     console.log('animate')
     animate();
-  }, [renderer]);
+  }, [composer]);
+
+  // 将角度转换为0到360度之间的值
+  function normalizeAngle(angle) {
+    angle = angle % 360; // 确保角度在0到359度之间
+    if (angle < 0) {
+      angle += 360; // 确保角度为正数
+    }
+    return angle;
+  }
+
+  // 将角度转换为前后左右方向
+  function getDirection(angle) {
+    angle = normalizeAngle(angle);
+    console.log(angle)
+    if (angle >= 0 && angle < 20 || angle >= 340 && angle < 360) {
+      return '正面';
+    } else if (angle >= 20 && angle < 160) {
+      return '右侧';
+    } else if (angle >= 160 && angle < 210) {
+      return '背面';
+    } else if (angle >= 210 && angle < 340) {
+      return '左侧';
+    }
+  }
+
 
   function animate() {
-    // console.log('animate')
+
     requestAnimationFrame(animate);
-    // if (cube) {
-    //   cube.rotation.x += 0.01;
-    //   cube.rotation.y += 0.01;
+
+    // if (renderer) {
+    //   renderer.render(scene, camera);
     // }
-    if (renderer) {
-      renderer.render(scene, camera);
+
+    // 获取相机的旋转角度
+    if (camera) {
+      let rotation = camera.rotation;
+      let angle = Math.round(THREE.MathUtils.radToDeg(rotation.z));
+      let dir = getDirection(angle)
+
+      setAngle(dir)
     }
+
+
+    if (composer) {
+      composer.render();
+    }
+
 
   }
 
@@ -46,36 +95,6 @@ function App() {
   }, []);
 
 
-  // useEffect(() => {
-  //   if (model) {
-  //     console.log('model',model)
-  //     if (scene) {
-
-  //       let mesh01 = new THREE.Mesh(model.geometry,model.material);
-  //       mesh01.scale.x=model.scale.x
-  //       mesh01.scale.y=model.scale.y
-  //       mesh01.scale.z=model.scale.z
-  //       scene.add(mesh01);
-
-  //       let mesh02 = new THREE.Mesh(model.geometry,model.material);
-  //       mesh02.position.x=9.3
-  //       mesh02.scale.x=model.scale.x
-  //       mesh02.scale.y=model.scale.y
-  //       mesh02.scale.z=model.scale.z
-  //       scene.add(mesh02);
-
-  //       let mesh03 = new THREE.Mesh(model.geometry,model.material);
-  //       mesh03.position.x=9.3
-  //       mesh03.scale.x=model.scale.x
-  //       mesh03.scale.y=model.scale.y
-  //       mesh03.scale.z=model.scale.z
-  //       scene.add(mesh03);
-
-
-
-  //     }
-  //   }
-  // }, [model]);
 
 
   const init = () => {
@@ -95,20 +114,11 @@ function App() {
 
 
     renderer.physicallyCorrectLights = true;
-    renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.setClearColor(0xcccccc);
     //像素
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(canvasW, canvasH);
 
-
-
-    // const geometry = new THREE.BoxGeometry();
-    // const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-    // let cube = new THREE.Mesh(geometry, material);
-    // setCube(cube)
-
-    // scene.add(cube);
 
     camera.position.z = 30;
     camera.position.x = 0;
@@ -146,11 +156,7 @@ function App() {
         // called when the resource is loaded
         console.log('模型加载完成');
         // console.log('gltf', gltf)
-
-        // setModel(gltf.scene.children[0])
         scene.add(gltf.scene);
-
-
       },
       (xhr) => {
         // called while loading is progressing
@@ -165,6 +171,38 @@ function App() {
 
     renderer.render(scene, camera);
     showEl.current.appendChild(renderer.domElement);
+
+    // 创建后期处理效果
+    // postprocessing
+
+    const composer = new EffectComposer(renderer);
+    const renderPass = new RenderPass(scene, camera);
+    composer.addPass(renderPass);
+    const outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), scene, camera);
+    outlinePass.usePatternTexture = true;
+    outlinePass.visibleEdgeColor.set('#ffffff'); // 可见边缘颜色
+    outlinePass.hiddenEdgeColor.set('#ffffff');  // 隐藏边缘颜色
+
+    composer.addPass(outlinePass);
+
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.load(process.env.PUBLIC_URL +
+      '/models/points.png', function (texture) {
+        outlinePass.patternTexture = texture;
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+      });
+
+    const outputPass = new OutputPass();
+    composer.addPass(outputPass);
+
+    const effectFXAA = new ShaderPass(FXAAShader);
+    effectFXAA.uniforms['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight);
+    composer.addPass(effectFXAA);
+
+    setOutlinePass(outlinePass)
+    setComposer(composer)
+
   }
 
 
@@ -182,7 +220,13 @@ function App() {
       }
     });
 
+    outlinePass.selectedObjects = [scene.getObjectByName('c' + item)];
+
+    setOutlinePass(outlinePass)
+
     setCount(item)
+
+
 
     // console.log('c28', scene.getObjectByName('c28'))
 
@@ -191,8 +235,6 @@ function App() {
 
   return (
     <div className='container'>
-
-
 
       <main>
         <div className="container py-2">
@@ -203,9 +245,15 @@ function App() {
             </a>
           </header>
 
-          <div style={{ position: 'absolute', margin: 8 }}>
-            {count} 件垛型
+
+          <div style={{ position: 'absolute', margin: 8, backgroundColor: '#d3d3d3', textAlign: 'center' }}>
+            <div style={{ margin: 8, width: 80 }}>{count} 件垛型 </div>
           </div>
+
+          <div style={{ position: 'absolute', margin: 8, marginTop: 365, textAlign: 'center' }}>
+            <div style={{ margin: 2 }}>{angle}</div>
+          </div>
+
 
           <div
             id="canvas"
@@ -260,8 +308,6 @@ function App() {
             >背面</button>
 
           </div>
-
-
 
 
           <footer className="pt-3 mt-4 text-muted border-top text-center" >
