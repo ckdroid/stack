@@ -28,8 +28,10 @@ function App() {
 
   const [angle, setAngle] = useState();
 
-  const toDegrees = (radians) => radians * (180 / Math.PI);
+  const [mtl1, setMtl1] = useState();
+  const [mtl2, setMtl2] = useState();
 
+  const [lastBox, setLastBox] = useState();
 
   useEffect(() => {
     console.log('animate')
@@ -48,7 +50,7 @@ function App() {
   // 将角度转换为前后左右方向
   function getDirection(angle) {
     angle = normalizeAngle(angle);
-    console.log(angle)
+    // console.log(angle)
     if (angle >= 0 && angle < 20 || angle >= 340 && angle < 360) {
       return '正面';
     } else if (angle >= 20 && angle < 160) {
@@ -157,6 +159,13 @@ function App() {
         console.log('模型加载完成');
         // console.log('gltf', gltf)
         scene.add(gltf.scene);
+
+        var mtl1 = scene.getObjectByName('c1').material.clone();
+        var mtl2 = mtl1.clone();
+        mtl2.color.set(0xA9A9A9);
+        setMtl1(mtl1)
+        setMtl2(mtl2)
+
       },
       (xhr) => {
         // called while loading is progressing
@@ -179,19 +188,19 @@ function App() {
     const renderPass = new RenderPass(scene, camera);
     composer.addPass(renderPass);
     const outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), scene, camera);
-    outlinePass.usePatternTexture = true;
+    // outlinePass.usePatternTexture = true;
     outlinePass.visibleEdgeColor.set('#ffffff'); // 可见边缘颜色
     outlinePass.hiddenEdgeColor.set('#ffffff');  // 隐藏边缘颜色
 
     composer.addPass(outlinePass);
 
-    const textureLoader = new THREE.TextureLoader();
-    textureLoader.load(process.env.PUBLIC_URL +
-      '/models/points.png', function (texture) {
-        outlinePass.patternTexture = texture;
-        texture.wrapS = THREE.RepeatWrapping;
-        texture.wrapT = THREE.RepeatWrapping;
-      });
+    // const textureLoader = new THREE.TextureLoader();
+    // textureLoader.load(process.env.PUBLIC_URL +
+    //   '/models/points.png', function (texture) {
+    //     outlinePass.patternTexture = texture;
+    //     texture.wrapS = THREE.RepeatWrapping;
+    //     texture.wrapT = THREE.RepeatWrapping;
+    //   });
 
     const outputPass = new OutputPass();
     composer.addPass(outputPass);
@@ -220,7 +229,17 @@ function App() {
       }
     });
 
+    if (lastBox) {
+      lastBox.material = mtl1;
+    }
+
     outlinePass.selectedObjects = [scene.getObjectByName('c' + item)];
+
+
+    var box = scene.getObjectByName('c' + item);
+    box.material = mtl2;
+
+    setLastBox(box)
 
     setOutlinePass(outlinePass)
 
