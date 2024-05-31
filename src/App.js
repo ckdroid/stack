@@ -30,8 +30,9 @@ function App() {
 
   const [mtl1, setMtl1] = useState();
   const [mtl2, setMtl2] = useState();
-
+  const [opacity, setOpacity] = useState(1);
   const [lastBox, setLastBox] = useState();
+
 
   useEffect(() => {
     console.log('animate')
@@ -80,11 +81,9 @@ function App() {
       setAngle(dir)
     }
 
-
     if (composer) {
       composer.render();
     }
-
 
   }
 
@@ -160,9 +159,14 @@ function App() {
         // console.log('gltf', gltf)
         scene.add(gltf.scene);
 
-        var mtl1 = scene.getObjectByName('c1').material.clone();
+        // var mtl1 = scene.getObjectByName('c1').material.clone();
+        var mtl1 = scene.getObjectByName('c1').material;
+        mtl1.transparent = true;
+        mtl1.opacity = 1;
+
         var mtl2 = mtl1.clone();
         mtl2.color.set(0xA9A9A9);
+
         setMtl1(mtl1)
         setMtl2(mtl2)
 
@@ -221,11 +225,11 @@ function App() {
     // console.log(item)
 
     arr.forEach(element => {
-
+      var el = scene.getObjectByName('c' + element);
       if (element > item) {
-        scene.getObjectByName('c' + element).visible = false
+        el.visible = false
       } else {
-        scene.getObjectByName('c' + element).visible = true
+        el.visible = true
       }
     });
 
@@ -233,19 +237,16 @@ function App() {
       lastBox.material = mtl1;
     }
 
-    outlinePass.selectedObjects = [scene.getObjectByName('c' + item)];
-
-
     var box = scene.getObjectByName('c' + item);
     box.material = mtl2;
+
+    outlinePass.selectedObjects = [box];
 
     setLastBox(box)
 
     setOutlinePass(outlinePass)
 
     setCount(item)
-
-
 
     // console.log('c28', scene.getObjectByName('c28'))
 
@@ -304,7 +305,7 @@ function App() {
             })}
 
             <button className="btn btn-outline-dark mt-1 text-center"
-              style={{ width: '23%', marginRight: '1%', marginLeft: '1%' }}
+              style={{ width: '16%', marginRight: '0.5%', marginLeft: '0.5%' }}
               onClick={() => {
                 controls.reset();
                 camera.position.z = 30;
@@ -312,10 +313,10 @@ function App() {
                 camera.position.y = 15;
                 controls.update();
               }}
-            >正面</button>
+            >正</button>
 
             <button className="btn btn-outline-dark mt-1 text-center"
-              style={{ width: '23%', marginRight: '1%', marginLeft: '0.5%' }}
+              style={{ width: '16%', marginRight: '0.5%', marginLeft: '0.5%' }}
               onClick={() => {
                 controls.reset();
                 camera.position.z = -30;
@@ -324,7 +325,14 @@ function App() {
                 controls.update();
 
               }}
-            >背面</button>
+            >背</button>
+
+            <button className="btn btn-outline-dark mt-1 text-center"
+              style={{ width: '15%', marginRight: '0.5%', marginLeft: '0.5%' }}
+              onClick={() => {
+                mtl1.opacity < 1 ? mtl1.opacity = 1 : mtl1.opacity = 0.4
+              }}
+            >透</button>
 
           </div>
 
